@@ -88,7 +88,7 @@ function updateChart(){
     })
 
     chart.data.labels = price;
-    chart.data.datasets.data =volume;
+    chart.data.datasets[0].data = volume;
     //console.log(price)
     chart.update()
 
