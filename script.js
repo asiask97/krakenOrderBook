@@ -73,7 +73,7 @@ function update_book (map, side, data) {
     if(Object.values(data)[5] == 0){
         console.log('deleted')
         map.delete(parseFloat(Object.values(data)[4]));
-        
+        updateChart()  
     }else{
         //update entry 
         console.log('updated');
