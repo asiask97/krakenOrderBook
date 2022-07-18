@@ -1,108 +1,142 @@
+//variables
+
+ws = new WebSocket('wss://futures.kraken.com/ws/v1')
+const product_id = "PI_ETHUSD"
+const asks = new Map();
+const bids = new Map();
+
 const ctx = document.getElementById('chart');
 let chart;
 
-// variables
-ws = new WebSocket('wss://ws.kraken.com')
-let asks = [];
-let bids = [];
-let message ='{"event":"subscribe", "subscription":{"name":"book"}, "pair":["ETH/EUR"]}'
-// Web Socket open connection
+
+//connect 
 ws.onopen = () => {
-    ws.send(message);
     console.log('Trade WS with Kraken connected')
+    
+    setTimeout(function(){
+        let request_messageTwo = {
+            "event": "subscribe",
+            "feed": 'book',
+            "product_ids": [product_id]
+        }
+        ws.send(JSON.stringify(request_messageTwo))
+        console.log(JSON.stringify(request_messageTwo))
+    }, 3000);
+
 }
 
-// Fires when new data is received from web socket
-ws.onmessage = (event) => {
-    var data = JSON.parse(event.data);
+//get messages
+ws.onmessage = (message) => {
+    let data = JSON.parse(message.data)
+    //console.log(data)
+    //console.log(Object.keys(data))
+    //Object.keys(data)[4]
     if (!data.event) {
-        if (data[1]['as']) {
-            asks = data[1]['as'];
-            bids = data[1]['bs'];
 
-            console.log('Initialised Book');
-            console.log(asks, bids);
+        if (Object.values(data)[0] == 'book_snapshot') {
+            let arrasks = Object.values(data)[6];
+            let arrbids = Object.values(data)[5];
+
+            arrasks.forEach((askitem) =>{
+                asks.set(parseFloat(Object.values(askitem)[0]), parseFloat(Object.values(askitem)[1]))
+            })
+
+            arrbids.forEach((biditem) =>{
+                bids.set(parseFloat(Object.values(biditem)[0]), parseFloat(Object.values(biditem)[1]))
+            })
+
             if(!chart){
                 display()
             }
-        } else if (data[1]['a'] || data[1]['b']) {
-            if (data[1]['a']) {
-                update_book(asks, 'ask', data[1]['a']);
+            console.log('Initialised Book');
+            console.log(asks, bids);
+
+
+        } else {
+            if(Object.values(data)[2] == 'sell' ) {
+                update_book(asks, 'ask', data);
             }
-            if (data[1]['b']) {
-                update_book(bids, 'bid', data[1]['b']);
+            if (Object.values(data)[2] == 'buy' ) {
+                update_book(bids, 'bid', data);
             }
         }
     }
 }
 
+
+
 // Updating Orderbook
-function update_book (arr, side, data) {
-        //console.log(side, data)
-        if (data.length > 1) {                                      // If 2 sets of data are received then the first will be deleted and the second will be added
-            let index = arr.findIndex(o => o[0] == data[0][0]);     // Get position of first data
-            
-            arr.splice(index, 1);                                   // Delete data              
-            arr.push([ data[1][0], data[1][1] ]);                   // Insert new data  
+function update_book (map, side, data) {
+       
+    console.log(data)
+    //delete entry if its volume is 0000
+    if(Object.values(data)[5] == 0){
+        console.log('deleted')
+        map.delete(parseFloat(Object.values(data)[4]));
+        
+    }else{
+        //update entry 
+        console.log('updated');
+        map.set(parseFloat(Object.values(data)[4]), parseFloat(Object.values(data)[5]))
+        //console.log(map.get(Object.values(data)[4]))
 
-            //console.log('Delete and Insert');
-        } else {
-            let index = arr.findIndex(o => o[0] == data[0][0]);
-            //console.error(index);
-            if (index > -1) {                           // If the index matches a price in the list then it is an update message
-                arr[index] = [data[0][0], data[0][1]];  // Update matching position in the book
-                //console.log('Updated ' + index);
-            } else {                                    // If the index is -1 then it is a new price that came in
-                arr.push([data[0][0], data[0][1]]);     // Insert new price
-                sort_book(arr, side);                   // Sort the book with the new price 
-                arr.splice(10, 1);                      // Delete the 11th entry
-                //console.log('Insert Only');
-            }                   
-        }
-        sort_book(arr, side);                                   // Sort the order book
-
+        // Sort the order book
+    }
+    sort_book(map, side);                                 
 }
 
 // Sort Orderbook
-function sort_book (arr, side) {
+function sort_book (map, side) {
     if (side == 'bid') {
-        arr.sort((x, y) => parseFloat(y[0]) - parseFloat(x[0]));
+        
+        var mapAsc = new Map([...map].sort(function (a, b) {  return a - b;  }));
+        map = mapAsc
         updateChart()                                       // Update Chart
 
+
     } else if (side == 'ask') {
-        arr.sort((x, y) => parseFloat(x[0]) - parseFloat(y[0]));
-        updateChart()                                       // Update Chart
+        
+        var mapAsc = new Map([...map].sort(function (a, b) {  return a - b;  }));
+        map = mapAsc
+        //updateChart()                                       // Update Chart
 
     }        
 
-    //console.log(asks, 'bid ->',bids)
 }
 
 
 function updateChart(){
     let price = []
     let volume = []
-    bids.forEach(function(bid){
-        price.push(bid[0]);
-        volume.push(bid[1]*bid[0])
-    })
-
+    max = 0;
+    for (const [key, value] of bids) {
+        price.push(key)
+        volume.push(value)
+        max++
+        if(max == 50){
+            break;
+        }
+    }
     chart.data.labels = price;
     chart.data.datasets[0].data = volume;
-    //console.log(price)
     chart.update()
 
 }
 
 
 function display(){
-    console.log('herrrer ----> ', bids)
     let price = []
     let volume = []
-    bids.forEach(function(bid){
-        price.push(bid[0]);
-        volume.push(bid[1]*bid[0])
-    })
+    max = 0;
+    for (const [key, value] of bids) {
+        price.push(key)
+        volume.push(value)
+        console.log(key, value); 
+        max++
+        if(max == 50){
+            break;
+        }
+    }
     chart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -122,3 +156,21 @@ function display(){
         }
     });
 }
+
+//challenge function for private requests
+/*function signin_challenge(message){
+    
+    // step 1: hash the message with SHA256
+    var hash = CryptoJS.SHA256(message);
+
+    // step 2: base64 decode api secret key
+    const secret_buffer = CryptoJS.enc.Base64.parse(api_secret);
+
+    // step 3: use result of step 2 to hash the result of step 1 with HMAC-SHA512
+    const hmac = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA512, secret_buffer);
+    hmac.update(hash, secret_buffer);
+    
+    // step 4: Base64-encode the result of step 3
+    let result = hmac.finalize().toString(CryptoJS.enc.Base64);
+    return result;
+}*/
