@@ -5,7 +5,9 @@ const product_id = "PI_ETHUSD"
 let asks = new Map();
 let bids = new Map();
 
-const ctx = document.getElementById('chart');
+const ctxBids = document.getElementById('chartBids');
+const ctxAsks = document.getElementById('chartAsks');
+
 let chart;
 
 
@@ -42,11 +44,12 @@ ws.onmessage = (message) => {
             })
 
             arrbids.forEach((biditem) =>{
-                bids.set(parseFloat(Object.values(biditem)[0]), [parseFloat(Object.values(biditem)[1]), 0])
+                bids.set(parseFloat(Object.values(biditem)[0]), parseFloat(Object.values(biditem)[1]))
             })
 
             if(!chart){
-                display()
+                displayBids()
+                displayAsks()
             }
             console.log('Initialised Book');
             console.log(asks, bids);
@@ -74,11 +77,16 @@ function update_book (map, side, data) {
     if(Object.values(data)[5] == 0){
         console.log('deleted')
         map.delete(parseFloat(Object.values(data)[4]));
-        updateChart()  
+        if(side == 'bid'){
+            updateChartBids()                                      
+        }
+        else{
+            updateChartAsks()
+        }
 
     }else{
-        // add/updates  price                       [       volume                      ,           squance num             ]
-        map.set(parseFloat(Object.values(data)[4]), [parseFloat(Object.values(data)[5]),parseFloat(Object.values(data)[3])])
+        // add/updates  price                       [       volume                               ]
+        map.set(parseFloat(Object.values(data)[4]), parseFloat(Object.values(data)[5]))
         console.log('updated');
     }
     sort_book(side);                                 
@@ -90,44 +98,55 @@ function sort_book (side) {
         // Sort the order book
         bids = new Map([...bids].sort((a, b) => b[0] - a[0]));
         console.log('sorted --->' , bids)
-        //updateChart()                                          // Update Chart
+        updateChartBids()                                          // Update Chart
     } else if (side == 'ask') {
         // Sort the order book
-        asks = new Map([...asks].sort((a, b) => b[0] - a[0]));
+        asks = new Map([...asks].sort(function(a,b){return a-b}));
         //console.log('sorted --->' , asks)
-        updateChart()                                          // Update Chart
-
+        updateChartAsks()
     }        
 
 }
 
-function updateChart(map){
+function updateChartBids(){
     let price = []
     let volume = []
-    let seq = []
     max = 0;
-    //console.log(map)
     for (const [key, value] of bids) {
         price.push(key)
-        volume.push(value[0])
-        seq.push(value[1])
+        volume.push(value)
+        max++
+        if(max == 10){
+            break;
+        }
+    }
+
+    chartbids.data.labels = price;
+    chartbids.data.datasets[0].data = volume;
+    chartbids.update()
+}
+function updateChartAsks(){
+    let price = []
+    let volume = []
+    max = 0;
+    for (const [key, value] of asks) {
+        price.push(key)
+        volume.push(value)
 
         max++
         if(max == 10){
             break;
         }
     }
-    console.log(seq, price)
+    
 
-    chart.data.labels = price;
-    chart.data.datasets[0].data = volume;
-    chart.update()
-
+    chartasks.data.labels = price;
+    chartasks.data.datasets[0].data = volume;
+    chartasks.update()
 }
 
-var ticks = [11000, 10000, 7000, 3000, 1000, 500, 100];
 
-function display(){
+function displayBids(){
     let price = []
     let volume = []
     max = 0;
@@ -140,7 +159,7 @@ function display(){
             break;
         }
     }
-    chart = new Chart(ctx, {
+    chartbids = new Chart(chartBids, {
         type: 'bar',
         data: {
             labels: price,
@@ -158,8 +177,50 @@ function display(){
             y:
              {
                 min: 0,
-                max: 100000,
-                stepSize: 5,
+                max: 150000,
+                ticks:{
+                   stepSize: 10000
+                }
+            },
+        }   
+    });
+}
+
+function displayAsks(){
+    let price = []
+    let volume = []
+    max = 0;
+    for (const [key, value] of asks) {
+        price.push(key)
+        volume.push(value)
+        console.log(key, value); 
+        max++
+        if(max == 10){
+            break;
+        }
+    }
+    chartasks = new Chart(chartAsks, {
+        type: 'bar',
+        data: {
+            labels: price,
+            datasets: [{
+                label: 'order size',
+                data: volume,
+                borderWidth: 1,
+                backgroundColor: ['rgb(0,255,0)']
+            }]
+        },
+        options: {
+            animation: {
+                
+            },
+            y:
+             {
+                min: 0,
+                max: 150000,
+                ticks:{
+                   stepSize: 10000
+                }
             },
         }   
     });
