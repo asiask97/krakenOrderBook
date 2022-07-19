@@ -90,7 +90,7 @@ function sort_book (side) {
         // Sort the order book
         bids = new Map([...bids].sort((a, b) => b[0] - a[0]));
         console.log('sorted --->' , bids)
-        updateChart()                                          // Update Chart
+        //updateChart()                                          // Update Chart
     } else if (side == 'ask') {
         // Sort the order book
         asks = new Map([...asks].sort((a, b) => b[0] - a[0]));
@@ -101,7 +101,6 @@ function sort_book (side) {
 
 }
 
-let show = document.getElementById('show')
 function updateChart(map){
     let price = []
     let volume = []
@@ -114,19 +113,19 @@ function updateChart(map){
         seq.push(value[1])
 
         max++
-        if(max == 25){
+        if(max == 10){
             break;
         }
     }
     console.log(seq, price)
 
-    show.innerHTML =price
     chart.data.labels = price;
     chart.data.datasets[0].data = volume;
     chart.update()
 
 }
 
+var ticks = [11000, 10000, 7000, 3000, 1000, 500, 100];
 
 function display(){
     let price = []
@@ -137,7 +136,7 @@ function display(){
         volume.push(value)
         console.log(key, value); 
         max++
-        if(max == 25){
+        if(max == 10){
             break;
         }
     }
@@ -148,19 +147,21 @@ function display(){
             datasets: [{
                 label: 'order size',
                 data: volume,
-                borderWidth: 1
+                borderWidth: 1,
+                backgroundColor: ['rgb(255,0,0)']
             }]
         },
         options: {
             animation: {
                 
             },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+            y:
+             {
+                min: 0,
+                max: 100000,
+                stepSize: 5,
+            },
+        }   
     });
 }
 
