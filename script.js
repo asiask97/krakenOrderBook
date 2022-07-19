@@ -2,8 +2,8 @@
 
 ws = new WebSocket('wss://futures.kraken.com/ws/v1')
 const product_id = "PI_ETHUSD"
-const asks = new Map();
-const bids = new Map();
+let asks = new Map();
+let bids = new Map();
 
 const ctx = document.getElementById('chart');
 let chart;
@@ -20,7 +20,7 @@ ws.onopen = () => {
             "product_ids": [product_id]
         }
         ws.send(JSON.stringify(request_messageTwo))
-        console.log(JSON.stringify(request_messageTwo))
+        //console.log(JSON.stringify(request_messageTwo))
     }, 3000);
 
 }
@@ -28,7 +28,7 @@ ws.onopen = () => {
 //get messages
 ws.onmessage = (message) => {
     let data = JSON.parse(message.data)
-    //console.log(data)
+    console.log(data)
     //console.log(Object.keys(data))
     //Object.keys(data)[4]
     if (!data.event) {
@@ -36,13 +36,13 @@ ws.onmessage = (message) => {
         if (Object.values(data)[0] == 'book_snapshot') {
             let arrasks = Object.values(data)[6];
             let arrbids = Object.values(data)[5];
-
+            console.log(arrbids)
             arrasks.forEach((askitem) =>{
                 asks.set(parseFloat(Object.values(askitem)[0]), parseFloat(Object.values(askitem)[1]))
             })
 
             arrbids.forEach((biditem) =>{
-                bids.set(parseFloat(Object.values(biditem)[0]), parseFloat(Object.values(biditem)[1]))
+                bids.set(parseFloat(Object.values(biditem)[0]), [parseFloat(Object.values(biditem)[1]), 0])
             })
 
             if(!chart){
@@ -68,55 +68,59 @@ ws.onmessage = (message) => {
 // Updating Orderbook
 function update_book (map, side, data) {
        
-    console.log(data)
-    //delete entry if its volume is 0000
+    //console.log(data)
+    //delete entry if its volume is 0
+    console.log(map)
     if(Object.values(data)[5] == 0){
         console.log('deleted')
         map.delete(parseFloat(Object.values(data)[4]));
         updateChart()  
-    }else{
-        //update entry 
-        console.log('updated');
-        map.set(parseFloat(Object.values(data)[4]), parseFloat(Object.values(data)[5]))
-        //console.log(map.get(Object.values(data)[4]))
 
-        // Sort the order book
+    }else{
+        // add/updates  price                       [       volume                      ,           squance num             ]
+        map.set(parseFloat(Object.values(data)[4]), [parseFloat(Object.values(data)[5]),parseFloat(Object.values(data)[3])])
+        console.log('updated');
     }
-    sort_book(map, side);                                 
+    sort_book(side);                                 
 }
 
 // Sort Orderbook
-function sort_book (map, side) {
+function sort_book (side) {
     if (side == 'bid') {
-        
-        var mapAsc = new Map([...map].sort(function (a, b) {  return a - b;  }));
-        map = mapAsc
-        updateChart()                                       // Update Chart
-
-
+        // Sort the order book
+        bids = new Map([...bids].sort((a, b) => b[0] - a[0]));
+        console.log('sorted --->' , bids)
+        updateChart()                                          // Update Chart
     } else if (side == 'ask') {
-        
-        var mapAsc = new Map([...map].sort(function (a, b) {  return a - b;  }));
-        map = mapAsc
-        //updateChart()                                       // Update Chart
+        // Sort the order book
+        asks = new Map([...asks].sort((a, b) => b[0] - a[0]));
+        //console.log('sorted --->' , asks)
+        updateChart()                                          // Update Chart
 
     }        
 
 }
 
-
-function updateChart(){
+let show = document.getElementById('show')
+function updateChart(map){
     let price = []
     let volume = []
+    let seq = []
     max = 0;
+    //console.log(map)
     for (const [key, value] of bids) {
         price.push(key)
-        volume.push(value)
+        volume.push(value[0])
+        seq.push(value[1])
+
         max++
-        if(max == 50){
+        if(max == 25){
             break;
         }
     }
+    console.log(seq, price)
+
+    show.innerHTML =price
     chart.data.labels = price;
     chart.data.datasets[0].data = volume;
     chart.update()
@@ -133,7 +137,7 @@ function display(){
         volume.push(value)
         console.log(key, value); 
         max++
-        if(max == 50){
+        if(max == 25){
             break;
         }
     }
@@ -148,6 +152,9 @@ function display(){
             }]
         },
         options: {
+            animation: {
+                
+            },
             scales: {
                 y: {
                     beginAtZero: true
