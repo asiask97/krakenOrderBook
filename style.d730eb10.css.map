@@ -1,1 +1,0 @@
-{"version":3,"sources":["css/style.css"],"names":[],"mappings":"AAAA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA","file":"style.d730eb10.css","sourceRoot":"../src","sourcesContent":["body { display: grid;\ngrid-template-columns: 50% 50%;}\n.asks{\n    width: 49vw;\n    height: 60vh;\n}\n\n.bids{\n    width: 49vw;\n    height: 60vh; \n}"]}
