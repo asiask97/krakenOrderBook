@@ -1,0 +1,13 @@
+body { display: grid;
+grid-template-columns: 50% 50%;}
+.asks{
+    width: 49vw;
+    height: 60vh;
+}
+
+.bids{
+    width: 49vw;
+    height: 60vh; 
+}
+
+/*# sourceMappingURL=https://github.com/asiask97/krakenOrderBook/style.d730eb10.css.map */
